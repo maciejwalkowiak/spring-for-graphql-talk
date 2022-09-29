@@ -1,27 +1,38 @@
 package com.example.starofjavagraphqltak;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@RestController
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.BatchMapping;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.stereotype.Controller;
+
+@Controller
 public class BookController {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BookController.class);
     private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
 
-    public BookController(BookRepository bookRepository) {
+    public BookController(BookRepository bookRepository, AuthorRepository authorRepository) {
         this.bookRepository = bookRepository;
+        this.authorRepository = authorRepository;
     }
 
-    @GetMapping("/books")
-    List<BookDTO> books() {
-        return ((List<Book>) bookRepository.findAll()).stream().map(BookDTO::fromBook).collect(Collectors.toList());
+    @BatchMapping
+    Map<Book, String> price(List<Book> books) {
+        throw new RuntimeException("foo");
     }
 
-    record BookDTO(Long id, String title, Integer publicationYear) {
-        static BookDTO fromBook(Book book) {
-            return new BookDTO(book.getId(), book.getTitle(), book.getPublicationYear());
-        }
+    @MutationMapping
+    Book addBook(@Argument("book") BookInput bookInput) {
+        var author = authorRepository.findById(bookInput.authorId()).get();
+        var book = new Book(bookInput.title, bookInput.publicationYear(), author);
+        return bookRepository.save(book);
     }
+
+    record BookInput(String title, Integer publicationYear, Long authorId) {}
 }
